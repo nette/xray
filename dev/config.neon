@@ -6,4 +6,6 @@ services:
 	- Nette\Xray\NeonAnalyzer
 	- Nette\Xray\LatteAnalyzer
 	- Nette\Xray\HtmlReport
+	- Nette\Xray\Uploader
+	- Nette\Xray\GitHubStars
 	app: Nette\Xray\App
