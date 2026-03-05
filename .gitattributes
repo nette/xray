@@ -1,0 +1,9 @@
+.gitattributes  export-ignore
+.github/        export-ignore
+.gitignore      export-ignore
+CLAUDE.md       export-ignore
+dev/            export-ignore
+compiler/       export-ignore
+
+*.php*          diff=php
+*.sh            text eol=lf
