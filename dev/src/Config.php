@@ -17,10 +17,12 @@ final readonly class Config
 	/**
 	 * @param string[] $paths default analysis paths
 	 * @param string[] $excludeDirs extra directories to exclude
+	 * @param bool $upload auto-upload without asking
 	 */
 	public function __construct(
 		public array $paths = [],
 		public array $excludeDirs = [],
+		public bool $upload = false,
 	) {
 	}
 
@@ -54,6 +56,7 @@ final readonly class Config
 		return new self(
 			paths: (array) ($data['paths'] ?? []),
 			excludeDirs: (array) ($data['excludeDirs'] ?? []),
+			upload: (bool) ($data['upload'] ?? false),
 		);
 	}
 
