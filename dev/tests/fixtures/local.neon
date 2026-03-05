@@ -1,0 +1,56 @@
+# Secondary config — tests merging, multiple DB connections, more service patterns
+
+database:
+	-
+		dsn: 'mysql:host=master;dbname=app'
+		user: app
+		password: secret
+		options:
+			charset: utf8mb4
+	-
+		dsn: 'mysql:host=replica;dbname=app'
+		user: readonly
+		password: secret
+		lazy: true
+
+services:
+	# Named services pointing to references
+	logger: @monolog.logger
+	eventDispatcher: @Symfony\EventDispatcher
+
+	# Simple classes
+	- App\Service\NewsletterManager
+	- App\Service\ImportService
+
+	# Entity with arguments
+	- App\Service\ApiClient(baseUrl: 'https://api.example.com', timeout: 30)
+
+	# Complex service with all keys
+	-
+		factory: App\Service\PaymentGateway
+		arguments:
+			apiKey: %payment.key%
+			sandbox: %payment.sandbox%
+		setup:
+			- setLogger(@logger)
+			- setCurrency('CZK')
+		autowired: true
+		tags: [payment, gateway]
+		inject: true
+
+	# Imported service
+	-
+		factory: App\Service\ExternalApi
+		imported: true
+
+parameters:
+	payment:
+		key: sk_test_123
+		sandbox: true
+
+tracy:
+	bar:
+		- Nette\Bridges\DITracy\ContainerPanel
+		- Nette\Bridges\HttpTracy\SessionPanel
+	blueScreen:
+		- App\Debug\CustomPanel::renderException

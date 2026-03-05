@@ -1,0 +1,50 @@
+#!/usr/bin/env php
+<?php declare(strict_types=1);
+
+return (function (array $argv): int {
+	gc_disable(); // performance boost
+
+	$phpstanAutoloader = require_once 'phar://' . __DIR__ . '/../vendor/phpstan/phpstan/phpstan.phar/vendor/autoload.php';
+	require_once 'phar://' . __DIR__ . '/../vendor/phpstan/phpstan/phpstan.phar/preload.php';
+	$phpstanAutoloader->unregister();
+
+	$currentWorkingDirectory = getcwd() ?: null;
+	if ($currentWorkingDirectory === null) {
+		echo "Could not get CWD\n";
+		return 1;
+	}
+
+	$devAutoloaderPath = __DIR__ . '/../vendor/autoload.php';
+	$cwdAutoloaderPath = $currentWorkingDirectory . '/vendor/autoload.php';
+	$composerAutoloaderProjectPaths = [];
+
+	if (is_file($cwdAutoloaderPath) && realpath($cwdAutoloaderPath) !== realpath($devAutoloaderPath)) {
+		// CWD is a different project — load its autoloader first (higher priority)
+		try {
+			require_once $cwdAutoloaderPath;
+		} catch (\Throwable $e) {
+			// platform_check.php may fail if project requires newer PHP
+			echo "Warning: Could not load project autoloader: {$e->getMessage()}\n";
+		}
+
+		$composerAutoloaderProjectPaths[] = $currentWorkingDirectory;
+
+		// Load dev autoloader second — only for Nette\Xray\* classes
+		if (is_file($devAutoloaderPath)) {
+			require_once $devAutoloaderPath;
+		}
+	} elseif (is_file($devAutoloaderPath)) {
+		// Running from Nette-Xray's own dir (development/testing)
+		require_once $devAutoloaderPath;
+		$composerAutoloaderProjectPaths[] = dirname($devAutoloaderPath, 2);
+	}
+
+	$phpstanAutoloader->register(true);
+
+	return \Nette\Xray\Bootstrap::run(
+		$argv,
+		$currentWorkingDirectory,
+		$composerAutoloaderProjectPaths,
+		__DIR__ . '/../config.neon',
+	);
+})($argv);

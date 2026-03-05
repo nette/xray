@@ -1,0 +1,481 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="utf-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<title>Nette X-Ray Report</title>
+	<style>
+		* { margin: 0; padding: 0; box-sizing: border-box; }
+		body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #f5f5f5; color: #333; line-height: 1.6; }
+		header { background: #2b5797; color: #fff; padding: 2rem; text-align: center; }
+		header h1 { font-size: 2rem; font-weight: 300; }
+		header .subtitle { opacity: .7; font-size: .9rem; }
+		nav { background: #1e3f6f; padding: .5rem 2rem; display: flex; gap: 1.5rem; }
+		nav a { color: #aac4e4; text-decoration: none; font-size: .9rem; }
+		nav a:hover { color: #fff; }
+		main { max-width: 1200px; margin: 2rem auto; padding: 0 1rem; }
+		section { background: #fff; border-radius: 8px; padding: 1.5rem 2rem; margin-bottom: 1.5rem; box-shadow: 0 1px 3px rgba(0,0,0,.08); }
+		h2 { color: #2b5797; border-bottom: 2px solid #e0e8f0; padding-bottom: .5rem; margin-bottom: 1rem; }
+		h3 { color: #555; margin: 1.2rem 0 .6rem; font-size: 1rem; }
+		h4 { color: #777; margin: .8rem 0 .4rem; font-size: .9rem; }
+		table { width: 100%; border-collapse: collapse; margin-bottom: 1rem; font-size: .85rem; }
+		th { background: #f0f4f8; text-align: left; padding: .5rem .75rem; font-weight: 600; border-bottom: 2px solid #d0d8e0; }
+		td { padding: .4rem .75rem; border-bottom: 1px solid #eee; }
+		tr:hover td { background: #f8fafc; }
+		.cards { display: flex; flex-wrap: wrap; gap: 1rem; margin: 1rem 0; }
+		.card { background: #f0f4f8; border-radius: 8px; padding: 1rem 1.5rem; text-align: center; min-width: 100px; }
+		.card .num { display: block; font-size: 1.8rem; font-weight: 700; color: #2b5797; }
+		.card .label { font-size: .75rem; color: #777; text-transform: uppercase; }
+		.bar-chart { margin: .5rem 0 1rem; }
+		.bar-row { display: flex; align-items: center; margin-bottom: .25rem; }
+		.bar-label { width: 120px; font-size: .85rem; text-align: right; padding-right: .75rem; flex-shrink: 0; }
+		.bar { background: #4a90d9; height: 20px; border-radius: 3px; min-width: 2px; transition: width .3s; }
+		.bar-value { font-size: .8rem; color: #777; padding-left: .5rem; }
+		footer { text-align: center; padding: 2rem; color: #999; font-size: .8rem; }
+		footer a { color: #2b5797; }
+		p { margin: .5rem 0; }
+		th { cursor: pointer; user-select: none; }
+		th::after { content: ' ⇅'; opacity: .3; font-size: .7em; }
+		th.sort-asc::after { content: ' ↑'; opacity: .7; }
+		th.sort-desc::after { content: ' ↓'; opacity: .7; }
+		.fade-row td, .fade-row .bar-label, .fade-row .bar, .fade-row .bar-value { opacity: .3; }
+		tr.hidden-row, .bar-row.hidden-row { display: none; }
+		.show-all-btn { display: inline-block; margin: .2rem 0 .8rem; padding: .3rem 1.2rem; background: #e8eef5; border: 1px solid #d0d8e4; border-radius: 4px; cursor: pointer; color: #2b5797; font-size: .8rem; font-family: inherit; }
+		.show-all-btn:hover { background: #d0daea; }
+	</style>
+</head>
+<body>
+	<header>
+		<h1>Nette X-Ray</h1>
+		<p class="subtitle">Usage report &middot; {$data->meta->generatedAt ?? ''}</p>
+	</header>
+
+	<nav>
+		<a href="#overview">Overview</a>
+		<a href="#php">PHP</a>
+		<a href="#latte">Latte</a>
+		<a href="#neon">NEON</a>
+	</nav>
+
+	<main>
+		<section id="overview">
+			<h2>Overview</h2>
+			<div class="cards">
+				<div class="card" n:foreach="$data->meta->files ?? [] as $ext => $count">
+					<span class="num">{$count}</span><span class="label">{$ext|upper} files</span>
+				</div>
+
+				{var $totalLines = array_sum($data->meta->lines ?? [])}
+				{if $totalLines > 0}
+				<div class="card"><span class="num">{$totalLines|number}</span><span class="label">total lines</span></div>
+				{/if}
+			</div>
+
+			{if $data->meta->composerPackages ?? null}
+			<h3>Composer Packages</h3>
+			<table>
+				<thead><tr><th>Package</th><th>Version</th></tr></thead>
+				<tbody>
+					<tr n:foreach="($data->meta->composerPackages|sort:byKey:true) as $name => $version">
+						<td>{$name}</td><td>{$version}</td>
+					</tr>
+				</tbody>
+			</table>
+			{/if}
+
+			{if $data->meta->npmPackages ?? null}
+			<h3>npm Packages</h3>
+			<table>
+				<thead><tr><th>Package</th><th>Version</th></tr></thead>
+				<tbody>
+					<tr n:foreach="($data->meta->npmPackages|sort:byKey:true) as $name => $version">
+						<td>{$name}</td><td>{$version}</td>
+					</tr>
+				</tbody>
+			</table>
+			{/if}
+
+			{var $ind = $data->meta->indentation ?? []}
+			{var $dominantIndent = max($ind) > 0 ? array_search(max($ind), $ind) : null}
+			{if $dominantIndent}
+			<p>Indentation: <strong>{$dominantIndent}</strong></p>
+			{/if}
+		</section>
+
+
+		<section id="php" n:if="(array) $data->php">
+			<h2>PHP</h2>
+
+			{if $data->php->methodCalls ?? null}
+			<h3>Method Calls</h3>
+			{include callTable, calls: $data->php->methodCalls}
+			{/if}
+
+			{if $data->php->staticCalls ?? null}
+			<h3>Static Calls</h3>
+			{include callTable, calls: $data->php->staticCalls}
+			{/if}
+
+			{if $data->php->functionCalls ?? null}
+			<h3>Function Calls</h3>
+			{include callTable, calls: $data->php->functionCalls}
+			{/if}
+
+			{if $data->php->instantiations ?? null}
+			<h3>Instantiation</h3>
+			<table>
+				<thead><tr><th>Class</th><th>Count</th></tr></thead>
+				<tbody>
+					<tr n:foreach="($data->php->instantiations|sort:by:count|reverse) as $class => $item">
+						<td>{$class}</td><td>{$item->count ?? 0}</td>
+					</tr>
+				</tbody>
+			</table>
+			{/if}
+
+			{if $data->php->constants ?? null}
+			<h3>Constants</h3>
+			<table>
+				<thead><tr><th>Constant</th><th>Count</th></tr></thead>
+				<tbody>
+					<tr n:foreach="($data->php->constants|sort|reverse) as $name => $count">
+						<td>{$name}</td><td>{$count}</td>
+					</tr>
+				</tbody>
+			</table>
+			{/if}
+
+			{if $data->php->propertyAccess ?? null}
+			<h3>Property Access</h3>
+			{include propertyTable, properties: $data->php->propertyAccess}
+			{/if}
+
+			{if $data->php->virtualPropertyAccess ?? null}
+			<h3>Virtual Property Access</h3>
+			{include propertyTable, properties: $data->php->virtualPropertyAccess}
+			{/if}
+
+			{if $data->php->inheritance ?? null}
+			<h3>Inheritance</h3>
+			{foreach $data->php->inheritance as $type => $classes}
+			<h4>{$type}</h4>
+			<table>
+				<thead><tr><th>Class</th><th>Count</th></tr></thead>
+				<tbody>
+					<tr n:foreach="($classes|sort|reverse) as $class => $count">
+						<td>{$class}</td><td>{$count}</td>
+					</tr>
+				</tbody>
+			</table>
+			{/foreach}
+			{/if}
+
+			{if $data->php->overrides ?? null}
+			<h3>Method Overrides</h3>
+			<table>
+				<thead><tr><th>Method</th><th>Count</th></tr></thead>
+				<tbody>
+					<tr n:foreach="($data->php->overrides|sort|reverse) as $method => $count">
+						<td>{$method}()</td><td>{$count}</td>
+					</tr>
+				</tbody>
+			</table>
+			{/if}
+
+			{if $data->php->callableReferences ?? null}
+			<h3>Callable References</h3>
+			<table>
+				<thead><tr><th>Method</th><th>Count</th></tr></thead>
+				<tbody>
+					<tr n:foreach="($data->php->callableReferences|sort|reverse) as $name => $count">
+						<td>{$name}(...)</td><td>{$count}</td>
+					</tr>
+				</tbody>
+			</table>
+			{/if}
+
+			{if $data->php->parseErrors ?? null}
+			<p>Parse errors: {$data->php->parseErrors}</p>
+			{/if}
+		</section>
+
+		<section id="latte" n:if="(array) $data->latte">
+			<h2>Latte</h2>
+
+			{var $tags = array_filter($data->latte->tags ?? [], fn($k) => !str_starts_with($k, '#'), \ARRAY_FILTER_USE_KEY)}
+			{if $tags}
+			<h3>Tags</h3>
+			<div class="bar-chart">
+				{var $maxTag = max($tags)}
+				<div class="bar-row" n:foreach="($tags|sort|reverse) as $name => $count">
+					{var $pct = $maxTag > 0 ? $count / $maxTag * 100 : 0}
+					<span class="bar-label">{l}{$name}{r}</span>
+					<span class="bar" style="width:{$pct|noescape}%"></span>
+					<span class="bar-value">{$count}</span>
+				</div>
+			</div>
+			{/if}
+
+			{var $nAttributes = array_filter($data->latte->nAttributes ?? [], fn($k) => !str_starts_with($k, '#'), \ARRAY_FILTER_USE_KEY)}
+			{if $nAttributes}
+			<h3>n:attributes</h3>
+			<div class="bar-chart">
+				{var $maxNA = max(array_map(fn($v) => $v->count, $nAttributes))}
+				<div class="bar-row" n:foreach="($nAttributes|sort:by:count|reverse) as $name => $item">
+					{var $pct = $maxNA > 0 ? $item->count / $maxNA * 100 : 0}
+					<span class="bar-label">{$name}</span>
+					<span class="bar" style="width:{$pct|noescape}%"></span>
+					<span class="bar-value">{$item->count}</span>
+				</div>
+			</div>
+			{/if}
+
+			{var $filters = array_filter($data->latte->filters ?? [], fn($k) => !str_starts_with($k, '#'), \ARRAY_FILTER_USE_KEY)}
+			{if $filters}
+			<h3>Filters</h3>
+			<div class="bar-chart">
+				{var $maxF = max(array_map(fn($v) => $v->count, $filters))}
+				<div class="bar-row" n:foreach="($filters|sort:by:count|reverse) as $name => $item">
+					{var $pct = $maxF > 0 ? $item->count / $maxF * 100 : 0}
+					<span class="bar-label">|{$name}</span>
+					<span class="bar" style="width:{$pct|noescape}%"></span>
+					<span class="bar-value">{$item->count}</span>
+				</div>
+			</div>
+			{/if}
+
+			{var $functions = array_filter($data->latte->functions ?? [], fn($k) => !str_starts_with($k, '#'), \ARRAY_FILTER_USE_KEY)}
+			{if $functions}
+			<h3>Functions</h3>
+			<div class="bar-chart">
+				{var $maxFn = max($functions)}
+				<div class="bar-row" n:foreach="($functions|sort|reverse) as $name => $count">
+					{var $pct = $maxFn > 0 ? $count / $maxFn * 100 : 0}
+					<span class="bar-label">{$name}()</span>
+					<span class="bar" style="width:{$pct|noescape}%"></span>
+					<span class="bar-value">{$count}</span>
+				</div>
+			</div>
+			{/if}
+
+			{if $data->latte->constants ?? null}
+			<h3>Constants</h3>
+			<div class="bar-chart">
+				{var $maxC = max($data->latte->constants)}
+				<div class="bar-row" n:foreach="($data->latte->constants|sort|reverse) as $name => $count">
+					{var $pct = $maxC > 0 ? $count / $maxC * 100 : 0}
+					<span class="bar-label">{$name}</span>
+					<span class="bar" style="width:{$pct|noescape}%"></span>
+					<span class="bar-value">{$count}</span>
+				</div>
+			</div>
+			{/if}
+
+			<p>
+				{if isset($data->latte->selfClosingTags)}Self-closing tags: {$data->latte->selfClosingTags}{/if}
+				{if isset($data->latte->dynamicElements)} &middot; Dynamic elements: {$data->latte->dynamicElements}{/if}
+				{if isset($data->latte->attributeExpressions)} &middot; Attribute expressions: {$data->latte->attributeExpressions}{/if}
+				{if isset($data->latte->parseErrors)} &middot; Parse errors: {$data->latte->parseErrors}{/if}
+			</p>
+		</section>
+
+		{var $sections = $data->neon->sections ?? []}
+		<section id="neon" n:if="(array) $data->neon">
+			<h2>NEON</h2>
+
+			{if $sections}
+			<h3>Sections</h3>
+			<div class="bar-chart">
+				{var $maxSec = max($sections)}
+				<div class="bar-row" n:foreach="($sections|sort|reverse) as $name => $count">
+					{var $pct = $maxSec > 0 ? $count / $maxSec * 100 : 0}
+					<span class="bar-label">{$name}</span>
+					<span class="bar" style="width:{$pct|noescape}%"></span>
+					<span class="bar-value">{$count}</span>
+				</div>
+			</div>
+			{/if}
+
+			{if $data->neon->services ?? null}
+			<h3>Services</h3>
+			<div class="card"><span class="num">{$data->neon->services->total ?? 0}</span><span class="label">total</span></div>
+			{foreach ['keys', 'values', 'arrayKeys', 'setup'] as $group}
+				{if isset($data->neon->services->$group) && is_array($data->neon->services->$group)}
+				<h4>{$group}</h4>
+				<div class="cards">
+					<div class="card" n:foreach="$data->neon->services->$group as $k => $v">
+						<span class="num">{$v}</span><span class="label">{$k}</span>
+					</div>
+				</div>
+				{/if}
+			{/foreach}
+			{/if}
+
+			{if $data->neon->search ?? null}
+			<h3>Search</h3>
+			<div class="card"><span class="num">{$data->neon->search->count ?? 0}</span><span class="label">entries</span></div>
+			{/if}
+
+			{if $data->neon->database ?? null}
+			<h3>Database Config</h3>
+			<p>Keys: {implode(', ', array_keys($data->neon->database))}</p>
+			{/if}
+
+			{foreach ['application', 'assets', 'di', 'http', 'latte', 'mail', 'routing', 'security', 'session', 'tracy'] as $section}
+			{var $sectionData = $data->neon->$section ?? null}
+			{if $sectionData && is_array($sectionData)}
+			<h3>{$section}</h3>
+			<table>
+				<thead><tr><th>Key</th><th>Value</th></tr></thead>
+				<tbody>
+					<tr n:foreach="$sectionData as $key => $value">
+						<td>{$key}</td><td>{$value}</td>
+					</tr>
+				</tbody>
+			</table>
+			{/if}
+			{/foreach}
+
+			{foreach ['constants', 'decorator', 'extensions', 'includes', 'parameters', 'php'] as $section}
+			{var $countProp = "itemCounts_$section"}
+			{if $data->neon->$countProp ?? null}
+			<p>{$section}: {$data->neon->$countProp} items</p>
+			{/if}
+			{/foreach}
+
+			{if $data->neon->parseErrors ?? null}
+			<p>Parse errors: {$data->neon->parseErrors}</p>
+			{/if}
+		</section>
+	</main>
+
+	<footer>
+		<p>Generated by <a href="https://github.com/nette/xray">Nette X-Ray</a></p>
+	</footer>
+
+	<script>const reportData = {$data};</script>
+	<script>
+	(function() {
+		var MAX = 15;
+
+		// --- Sortable table headers ---
+		document.querySelectorAll('table thead th').forEach(function(th) {
+			th.addEventListener('click', function() {
+				var table = th.closest('table');
+				var tbody = table.querySelector('tbody');
+				if (!tbody) return;
+				var idx = Array.from(th.parentNode.children).indexOf(th);
+				var rows = Array.from(tbody.querySelectorAll('tr'));
+				var asc = !th.classList.contains('sort-asc');
+
+				table.querySelectorAll('th').forEach(function(h) {
+					h.classList.remove('sort-asc', 'sort-desc');
+				});
+				th.classList.add(asc ? 'sort-asc' : 'sort-desc');
+
+				rows.sort(function(a, b) {
+					var at = (a.children[idx] || a).textContent.trim();
+					var bt = (b.children[idx] || b).textContent.trim();
+					var an = parseFloat(at.replace(/,/g, ''));
+					var bn = parseFloat(bt.replace(/,/g, ''));
+					if (!isNaN(an) && !isNaN(bn)) return asc ? an - bn : bn - an;
+					return asc ? at.localeCompare(bt) : bt.localeCompare(at);
+				});
+
+				rows.forEach(function(r) {
+					tbody.appendChild(r);
+				});
+				truncate(table, 'tbody tr');
+			});
+		});
+
+		// --- Truncation ---
+		function truncate(container, selector) {
+			var items = container.querySelectorAll(selector);
+			if (items.length <= MAX) return;
+			var btn = container.nextElementSibling;
+			if (btn && btn.classList.contains('show-all-btn') && btn.dataset.expanded === 'true') return;
+
+			items.forEach(function(el, i) {
+				el.classList.remove('hidden-row', 'fade-row');
+				if (i === MAX - 1) el.classList.add('fade-row');
+				if (i >= MAX) el.classList.add('hidden-row');
+			});
+
+			if (!btn || !btn.classList.contains('show-all-btn')) {
+				btn = document.createElement('button');
+				btn.className = 'show-all-btn';
+				btn.dataset.selector = selector;
+				container.after(btn);
+			}
+			var label = selector.indexOf('bar-row') >= 0 ? 'items' : 'rows';
+			btn.textContent = 'Show all ' + items.length + ' ' + label;
+			btn.dataset.expanded = 'false';
+			btn.style.display = '';
+		}
+
+		document.querySelectorAll('table').forEach(function(t) {
+			truncate(t, 'tbody tr');
+		});
+		document.querySelectorAll('.bar-chart').forEach(function(c) {
+			truncate(c, '.bar-row');
+		});
+
+		// --- Toggle ---
+		document.addEventListener('click', function(e) {
+			var btn = e.target;
+			if (!btn.classList.contains('show-all-btn')) return;
+			var container = btn.previousElementSibling;
+			var selector = btn.dataset.selector;
+
+			if (btn.dataset.expanded === 'true') {
+				var items = container.querySelectorAll(selector);
+				items.forEach(function(el, i) {
+					el.classList.remove('hidden-row', 'fade-row');
+					if (i === MAX - 1) el.classList.add('fade-row');
+					if (i >= MAX) el.classList.add('hidden-row');
+				});
+				var label = selector.indexOf('bar-row') >= 0 ? 'items' : 'rows';
+				btn.textContent = 'Show all ' + items.length + ' ' + label;
+				btn.dataset.expanded = 'false';
+			} else {
+				container.querySelectorAll('.hidden-row, .fade-row').forEach(function(el) {
+					el.classList.remove('hidden-row', 'fade-row');
+				});
+				btn.textContent = 'Show less';
+				btn.dataset.expanded = 'true';
+			}
+		});
+	})();
+	</script>
+</body>
+</html>
+
+{define callTable, array $calls}
+<table>
+	<thead><tr><th>Name</th><th>Count</th><th>Return</th><th>Args</th></tr></thead>
+	<tbody>
+	<tr n:foreach="($calls|sort:by:count|reverse) as $name => $item">
+		<td>{$name}()</td>
+		<td>{$item->count ?? 0}</td>
+		<td>{formatReturn($item)}</td>
+		<td>{formatArgs($item)}</td>
+	</tr>
+	</tbody>
+</table>
+{/define}
+
+{define propertyTable, array $properties}
+<table>
+	<thead><tr><th>Property</th><th>Read</th><th>Write</th><th>Push</th><th>Ref</th></tr></thead>
+	<tbody>
+	<tr n:foreach="($properties|sort:fn($a, $b) => ($b->read ?? 0) <=> ($a->read ?? 0)) as $name => $access">
+		<td>{$name}</td>
+		<td>{$access->read ?? ''}</td>
+		<td>{$access->write ?? ''}</td>
+		<td>{$access->arrayPush ?? ''}</td>
+		<td>{$access->reference ?? ''}</td>
+	</tr>
+	</tbody>
+</table>
+{/define}

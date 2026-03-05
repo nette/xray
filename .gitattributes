@@ -7,3 +7,5 @@ compiler/       export-ignore
 
 *.php*          diff=php
 *.sh            text eol=lf
+bin/xray        text eol=lf
+dev/bin/xray    text eol=lf

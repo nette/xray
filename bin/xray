@@ -1,0 +1,49 @@
+#!/usr/bin/env php
+<?php declare(strict_types=1);
+
+return (function (array $argv): int {
+	gc_disable(); // performance boost
+
+	// Find PHPStan PHAR: either in project vendor (Composer install) or in repo vendor (development)
+	$phpstanPharDir = __DIR__ . '/../../../phpstan/phpstan'; // vendor/nette/xray/bin/../../../phpstan/phpstan
+	if (!is_file($phpstanPharDir . '/phpstan.phar')) {
+		$phpstanPharDir = __DIR__ . '/../vendor/phpstan/phpstan'; // bin/../vendor/phpstan/phpstan (repo root)
+	}
+
+	$phpstanAutoloader = require_once 'phar://' . $phpstanPharDir . '/phpstan.phar/vendor/autoload.php';
+	require_once 'phar://' . $phpstanPharDir . '/phpstan.phar/preload.php';
+	$phpstanAutoloader->unregister();
+
+	$currentWorkingDirectory = getcwd() ?: null;
+	if ($currentWorkingDirectory === null) {
+		echo "Could not get CWD\n";
+		return 1;
+	}
+
+	$composerAutoloaderProjectPaths = [];
+	$cwdAutoloaderPath = $currentWorkingDirectory . '/vendor/autoload.php';
+
+	if (is_file($cwdAutoloaderPath)) {
+		try {
+			require_once $cwdAutoloaderPath;
+		} catch (\Throwable $e) {
+			// platform_check.php may fail if project requires newer PHP
+			echo "Warning: Could not load project autoloader: {$e->getMessage()}\n";
+		}
+
+		$composerAutoloaderProjectPaths[] = $currentWorkingDirectory;
+	}
+
+	// Load xray.phar (scoped Nette/Latte + unscoped Nette\Xray)
+	Phar::loadPhar(__DIR__ . '/../xray.phar', 'xray.phar');
+	require_once 'phar://xray.phar/vendor/autoload.php';
+
+	$phpstanAutoloader->register(true);
+
+	return \Nette\Xray\Bootstrap::run(
+		$argv,
+		$currentWorkingDirectory,
+		$composerAutoloaderProjectPaths,
+		'phar://xray.phar/config.neon',
+	);
+})($argv);
