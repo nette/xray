@@ -1,0 +1,9 @@
+services:
+	phpAnalyzer: Nette\Xray\PhpAnalyzer(
+		parser: @defaultAnalysisParser,
+		pathRoutingParser: @pathRoutingParser,
+	)
+	- Nette\Xray\NeonAnalyzer
+	- Nette\Xray\LatteAnalyzer
+	- Nette\Xray\HtmlReport
+	app: Nette\Xray\App

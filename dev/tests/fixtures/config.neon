@@ -1,0 +1,234 @@
+# Main application config — covers most common sections
+
+extensions:
+	router: Nette\Application\DI\RoutingExtension
+	console: Contributte\Console\DI\ConsoleExtension
+	assets: Nette\Bridges\ApplicationDI\AssetsExtension
+
+application:
+	errorPresenter: Error
+	mapping:
+		*: App\Modules\*\*Presenter
+	catchExceptions: true
+	silentLinks: false
+	debugger: true
+
+latte:
+	strictTypes: true
+	strictParsing: true
+	phpLinter: null
+	locale: cs
+	templateClass: App\Model\MyTemplate
+	extensions:
+		- App\Latte\MyExtension
+		- App\Latte\AnotherExtension
+		- App\Latte\ThirdExtension
+
+session:
+	expiration: 14 days
+	autoStart: smart
+	cookieSamesite: Lax
+
+database:
+	dsn: 'mysql:host=localhost;dbname=test'
+	user: root
+	password: secret
+	lazy: true
+	options:
+		charset: utf8mb4
+	conventions: discovered
+
+services:
+	# --- Value: simple class string (numeric key) ---
+	- App\Model\UserRepository
+	- App\Model\ArticleManager
+	- App\Model\CategoryService
+
+	# --- Value: simple class string (named key = service name) ---
+	authenticator: App\Model\Authenticator
+	mailer: App\Model\MailService
+	cache: App\Model\CacheService
+
+	# --- Key: class name as key ---
+	App\Model\Logger: self
+	App\Model\Metrics:
+		setup:
+			- setEnabled(true)
+
+	# --- Key: reference (alteration of existing service) ---
+	@Nette\Application\Application:
+		setup:
+			- $errorPresenter = Error
+	@Nette\Http\Session:
+		setup:
+			- setOptions([cookie_secure: true])
+
+	# --- Value: reference ---
+	router: @Nette\Application\IRouter
+	- @App\Model\SomeService
+
+	# --- Value: false (disable service) ---
+	routing.router: false
+	security.passwords: false
+
+	# --- Value: Neon entity (class with inline arguments) ---
+	- App\Model\Mailer(smtp: localhost, port: 587)
+	- App\Model\Logger(channel: app)
+
+	# --- Value: array — factory key, with all setup item types ---
+	-
+		factory: App\Model\AuthService
+		arguments: [secret: %appSecret%]
+		setup:
+			- setLogger(@logger)            # Entity: methodCall
+			- setDebugMode(%debugMode%)      # Entity: methodCall
+			- $property = value              # array: propertySet
+			- @Nette\Bar::factory()          # Entity: referenceCall
+
+	# --- Value: array — class key ---
+	-
+		class: App\Model\CacheManager
+		autowired: false
+		tags: [background, cron]
+
+	# --- Value: array — type key ---
+	-
+		type: App\Model\MailQueue
+		arguments: [%mailer.queue%]
+
+	# --- Value: array — create key ---
+	-
+		create: App\Model\PdfGenerator(%tempDir%)
+		setup:
+			- setWatermark('Draft')
+
+	# --- Value: array — autowired: self ---
+	-
+		factory: App\Model\InternalApi
+		autowired: self
+
+	# --- Value: array — implement (interface factory) ---
+	-
+		implement: App\Model\IUserFactory
+
+	# --- Value: array — inject ---
+	-
+		factory: App\Model\Presenter
+		inject: true
+
+	# --- Value: array — tags only ---
+	-
+		class: App\Model\EventListener
+		tags: [event.listener]
+
+	# --- Value: array — alteration ---
+	App\Model\BaseService:
+		alteration: true
+		setup:
+			- addPlugin(@plugin)
+
+	# --- Value: array — lazy ---
+	-
+		create: App\Model\HeavyService
+		lazy: true
+
+	# --- LocatorDefinition (implement + references) ---
+	-
+		implement: App\Model\IServiceLocator
+		references:
+			user: App\Model\UserService
+			article: App\Model\ArticleService
+
+	# --- LocatorDefinition (implement + tagged) ---
+	-
+		implement: App\Model\IHandlerLocator
+		tagged: handler
+
+	# --- AccessorDefinition (implement with no create method) ---
+	-
+		implement: App\Model\IUserAccessor
+
+	# --- ImportedDefinition ---
+	-
+		type: App\Model\ExternalService
+		imported: true
+
+	# --- reset (override parent definition) ---
+	-
+		create: App\Model\OverriddenService
+		reset:
+			setup: true
+
+search:
+	app:
+		in: %appDir%
+		classes:
+			- App\Model\*
+	commands:
+		in: %appDir%/Commands
+		classes:
+			- App\Commands\*
+
+routing:
+	routes:
+		'<presenter>/<action>[/<id>]': Homepage:default
+	cache: true
+
+security:
+	authentication:
+		storage: session
+	roles:
+		admin: null
+		editor: null
+
+http:
+	proxy:
+		- 127.0.0.1
+	cookieSecure: auto
+	csp:
+		script-src: nonce
+
+mail:
+	smtp: true
+	host: smtp.example.com
+	port: 587
+	secure: tls
+
+tracy:
+	showBar: true
+	strictMode: true
+	maxDepth: 5
+	editor: 'phpstorm://open?file=%%file&line=%%line'
+
+di:
+	export:
+		parameters: false
+		tags: true
+	debugger: true
+
+parameters:
+	appSecret: secret123
+	debugMode: false
+	mailer:
+		queue: %tempDir%/mailqueue
+	database:
+		host: localhost
+	tempDir: %appDir%/../temp
+
+constants:
+	MY_CONST: value
+	ANOTHER_CONST: 42
+
+decorator:
+	App\Model\BaseRepository:
+		setup:
+			- setEntityManager
+
+includes:
+	- local.neon
+	- services.neon
+	- routes.neon
+
+php:
+	date.timezone: Europe/Prague
+	session.gc_maxlifetime: 86400
