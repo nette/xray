@@ -19,6 +19,8 @@ final readonly class Config
 		public array $paths = [],
 		/** @var string[] extra directories to exclude */
 		public array $excludeDirs = [],
+		/** auto-upload without asking */
+		public bool $upload = false,
 	) {
 	}
 
@@ -52,6 +54,7 @@ final readonly class Config
 		return new self(
 			paths: (array) ($data['paths'] ?? []),
 			excludeDirs: (array) ($data['excludeDirs'] ?? []),
+			upload: (bool) ($data['upload'] ?? false),
 		);
 	}
 

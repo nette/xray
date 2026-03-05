@@ -33,6 +33,8 @@ final readonly class App
 		private NeonAnalyzer $neonAnalyzer,
 		private LatteAnalyzer $latteAnalyzer,
 		private HtmlReport $htmlReport,
+		private Uploader $uploader,
+		private GitHubStars $gitHubStars,
 	) {
 	}
 
@@ -94,6 +96,10 @@ final readonly class App
 		fwrite(STDOUT, "Reports saved to:\n");
 		fwrite(STDOUT, "  xray-report.json\n");
 		fwrite(STDOUT, "  xray-report.html\n\n");
+
+		// TODO: re-enable after debugging
+		// $this->uploader->upload($collector, $config->upload);
+		// $this->gitHubStars->run($collector->meta->composerPackages ?? [], $collector->meta->npmPackages ?? []);
 
 		return 0;
 	}
@@ -183,7 +189,12 @@ final readonly class App
 		$composerPackages = $this->readComposerPackages();
 		$npmPackages = $this->readNpmPackages();
 
+		$sortedPaths = $paths;
+		sort($sortedPaths);
+
 		$collector->meta = (object) [
+			'projectId' => md5(implode("\0", $sortedPaths)),
+			'userId' => md5(gethostname() . "\0" . (getenv('USERNAME') ?: getenv('USER') ?: '')),
 			'version' => '1.0',
 			'generatedAt' => date('c'),
 			'files' => $files,
