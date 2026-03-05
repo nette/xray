@@ -1,0 +1,32 @@
+{layout 'layout.latte'}
+
+{block content}
+<h1>{$title|noescape}</h1>
+
+{foreach $items as $item}
+	<div n:class="$item->active ? active">
+		<a n:href="detail, id: $item->id">{$item->name}</a>
+		<span>{$item->price|number:2}</span>
+		<span>{$item->date|date:'j. n. Y'}</span>
+	</div>
+{/foreach}
+
+{if $user}
+	<p>{$user->email|noescape}</p>
+	<p>{=\PHP_VERSION}</p>
+	<p>v{=\PHP_INT_SIZE}</p>
+{/if}
+
+{snippet cart}
+	<div>{$cartCount} items</div>
+{/snippet}
+
+<br />
+<img src={$logo} />
+
+{form signForm}
+	{input name}
+	{label email}Email:{/label}
+	{input email}
+	{input send}
+{/form}
