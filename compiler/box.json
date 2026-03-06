@@ -1,0 +1,12 @@
+{
+	"alias": "xray.phar",
+	"banner": false,
+	"base-path": "../dev",
+	"check-requirements": false,
+	"compactors": ["KevinGH\\Box\\Compactor\\PhpScoper"],
+	"files": ["config.neon", "vendor/composer/installed.php"],
+	"directories": ["src"],
+	"force-autodiscovery": true,
+	"output": "../xray.phar",
+	"php-scoper": "../compiler/scoper.inc.php"
+}

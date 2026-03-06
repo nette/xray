@@ -9,6 +9,7 @@ paths:
 	- dev/tests
 	- dev/bin/xray
 	- bin/xray
+	- compiler/scoper.inc.php
 
 excludePaths:
 	- fixtures
