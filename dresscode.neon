@@ -1,0 +1,28 @@
+use:
+	- nette
+	- modernizations
+
+typeAnalysis: phpstan
+
+paths:
+	- dev/src
+	- dev/tests
+	- dev/bin/xray
+	- bin/xray
+
+excludePaths:
+	- fixtures
+
+fileExtensions:
+	- php
+	- phpt
+
+imports: {grouping: {class: grouped}}
+
+overrides:
+	-
+		paths: [dev/src]
+		nameResolution: certain
+		use:
+			- compilerOptimizations
+			- deprecations
