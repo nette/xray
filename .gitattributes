@@ -1,7 +1,7 @@
 .gitattributes  export-ignore
 .github/        export-ignore
 .gitignore      export-ignore
-CLAUDE.md       export-ignore
+AGENTS.md       export-ignore
 dev/            export-ignore
 compiler/       export-ignore
 
@@ -9,3 +9,4 @@ compiler/       export-ignore
 *.sh            text eol=lf
 bin/xray        text eol=lf
 dev/bin/xray    text eol=lf
+docs/           export-ignore
